@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(180deg, #f4f4f4, #d1d1d1);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .calculator {
+            background-color: #e5e5e5;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            max-width: 400px;
+            width: 100%;
+            position: absolute;
+            cursor: grab;
+            user-select: none;
+        }
+        .lock-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 5px;
+            background-color: #e5e5e5;
+            color: black;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .locked {
+            background-color: #e5e5e5 !important;
+            color: red !important;
+        }
+        .calculator-header {
+            background-color: #e5e5e5;
+            padding: 20px;
+            text-align: right;
+            font-size: 32px;
+            border-bottom: 1px solid #ccc;
+        }
+        .calculator-body {
+            padding: 20px;
+        }
+        .calculator-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        .calculator-button {
+            padding: 20px;
+            font-size: 24px;
+            text-align: center;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .calculator-button:hover {
+            background-color: #ddd;
+        }
+        .calculator-button.number {
+            background: linear-gradient(135deg, #ff7300, #e60073);
+            color: white;
+        }
+        .calculator-button-extend {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            padding: 15px 20px;
+            margin-top: 20px;
+            font-size: 18px;
+            transition: background-color 0.2s;
+        }
+        .calculator-button-extend:hover {
+            background-color: #0056b3;
+        }
+
+        .calculator-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .calculator-buttons-extended {
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .calculator-buttons-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .extended-buttons-visible {
+            display: grid !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calculator" id="calculator">
+        <div class="calculator-button" onclick="eraseDigit()">&larr;</div>
+        <button class="lock-button" id="lockButton" onclick="toggleLock()">Lock</button>
+        <div class="calculator-header" id="result">0</div>
+        <div class="calculator-body">
+            <div class="calculator-buttons-container">
+                <div class="calculator-buttons">
+                <div class="calculator-button" onclick="clearEntry()">CE</div>
+                <div class="calculator-button number" onclick="appendNumber('7')">7</div>
+                <div class="calculator-button number" onclick="appendNumber('8')">8</div>
+                <div class="calculator-button number" onclick="appendNumber('9')">9</div>
+                <div class="calculator-button" onclick="appendOperator('/')">/</div>
+                <div class="calculator-button number" onclick="appendNumber('4')">4</div>
+                <div class="calculator-button number" onclick="appendNumber('5')">5</div>
+                <div class="calculator-button number" onclick="appendNumber('6')">6</div>
+                <div class="calculator-button" onclick="appendOperator('*')">*</div>
+                <div class="calculator-button number" onclick="appendNumber('1')">1</div>
+                <div class="calculator-button number" onclick="appendNumber('2')">2</div>
+                <div class="calculator-button number" onclick="appendNumber('3')">3</div>
+                <div class="calculator-button" onclick="appendOperator('-')">-</div>
+                <div class="calculator-button number" onclick="appendNumber('0')">0</div>
+                <div class="calculator-button" onclick="toggleSign()">+/-</div>
+                <div class="calculator-button" onclick="calculateResult()">=</div>
+                <div class="calculator-button" onclick="appendOperator('+')">+</div>
+                <div class="calculator-button" onclick="calculatePercent()">%</div>
+                </div>
+                <div class="calculator-buttons-extended">
+                 <div class="calculator-button" onclick="calculateExtendedResult('√')">√</div>
+                <div class="calculator-button" onclick="calculateExtendedResult('sin')">sin</div>
+                <div class="calculator-button" onclick="calculateExtendedResult('cos')">cos</div>
+                <div class="calculator-button" onclick="calculateExtendedResult('log')">log</div>
+                <div class="calculator-button" onclick="calculateExtendedResult('exp')">e^x</div>
+                <div class="calculator-button" onclick="calculateExtendedResult('x^2')">x^2</div>
+                <div class="calculator-button" onclick="calculateExtendedResult('x^y')">x^y</div>
+                <div class="calculator-button" onclick="calculateExtendedResult('π')">π</div>
+                <div class="calculator-button" onclick="calculateExtendedResult('e')">e</div>
+                </div>
+            </div>
+        </div>
+        <button class="calculator-button-extend" onclick="toggleExtended()">Extend</button>
+    </div>
+    <script>
+    // Инициализация переменных для управления состоянием калькулятора
+    let currentInput = '0';             // Текущее введенное значение
+    let currentOperator = '';           // Текущий математический оператор (+, -, *, / и т. д.)
+    let storedValue = '';               // Значение, сохраненное для расчетов
+    let isExtended = false;             // Флаг отображения дополнительных (научных) кнопок
+    let isLocked = false;               // Флаг блокировки калькулятора
+    let isDragging = false;             // Флаг перемещения калькулятора
+    let isPercentButtonClicked = false; // Флаг нажатия кнопки процента
+    let xOffset = 0;                    // Смещение по оси X при перемещении калькулятора
+    let yOffset = 0;                    // Смещение по оси Y при перемещении калькулятора
+
+
+    const calculator = document.getElementById('calculator');
+    const lockButton = document.getElementById('lockButton');
+
+    calculator.addEventListener('mousedown', startDragging);
+    calculator.addEventListener('mouseup', stopDragging);
+    calculator.addEventListener('mousemove', drag);
+
+    function startDragging(e) {
+        if (isLocked) return;
+        isDragging = true;
+        xOffset = e.clientX - calculator.getBoundingClientRect().left;
+        yOffset = e.clientY - calculator.getBoundingClientRect().top;
+    }
+
+    function stopDragging() {
+        isDragging = false;
+    }
+
+    function drag(e) {
+        if (!isDragging) return;
+        if (isLocked) return;
+
+        const newX = e.clientX - xOffset;
+        const newY = e.clientY - yOffset;
+
+        calculator.style.left = `${newX}px`;
+        calculator.style.top = `${newY}px`;
+    }
+
+    function updateDisplay() {
+        document.getElementById('result').textContent = currentInput;
+    }
+
+  function appendNumber(num) {
+    if (currentInput === '0' || currentInput === 'ERROR') {
+        currentInput = num;
+    } else if (currentInput !== 'ERROR') {
+        currentInput += num;
+    }
+    updateDisplay();
+}
+
+
+    function appendOperator(op) {
+        if (currentOperator !== '') {
+            calculateResult();
+        }
+        currentOperator = op;
+        storedValue = currentInput;
+        currentInput = '0';
+        updateDisplay();
+    }
+
+    function calculateResult() {
+        const inputValue = parseFloat(currentInput);
+        const storedValueFloat = parseFloat(storedValue);
+
+        if (currentOperator === '+') {
+            currentInput = (storedValueFloat + inputValue).toString();
+        } else if (currentOperator === '-') {
+            currentInput = (storedValueFloat - inputValue).toString();
+        } else if (currentOperator === '*') {
+            currentInput = (storedValueFloat * inputValue).toString();
+        } else if (currentOperator === '/') {
+            if (inputValue === 0) {
+                currentInput = 'ERROR'; // Division by zero
+            } else {
+                currentInput = (storedValueFloat / inputValue).toString();
+            } 
+        } else if (currentOperator === '^') {
+            currentInput = calculatePower(storedValueFloat, inputValue).toString();
+        }
+
+        if (currentInput === 'Infinity' || currentInput === '-Infinity') {
+            currentInput = 'ERROR';
+        }
+
+        currentOperator = '';
+        storedValue = '';
+        updateDisplay();
+    }
+
+
+    function calculateSqrt(value) {
+        if (value < 0) {
+            return 'Ошибка';
+        }
+
+        const epsilon = 1e-10;
+        let guess = value;
+        while (Math.abs(guess * guess - value) > epsilon) {
+            guess = 0.5 * (guess + value / guess);
+        }
+
+        return guess.toString();
+    }
+
+    function calculateSin(value) {
+        value = value * (Math.PI / 180);
+        const iterations = 10;
+        let result = 0;
+        for (let n = 0; n < iterations; n++) {
+            result += (Math.pow(-1, n) * Math.pow(value, 2 * n + 1)) / factorial(2 * n + 1);
+        }
+        return result.toFixed(10);
+    }
+
+    function factorial(n) {
+        if (n === 0 || n === 1) {
+            return 1;
+        }
+        return n * factorial(n - 1);
+    }
+
+    function calculateCos(value) {
+        value = value * (Math.PI / 180);
+        const iterations = 10;
+        let result = 0;
+        for (let n = 0; n < iterations; n++) {
+            result += (Math.pow(-1, n) * Math.pow(value, 2 * n)) / factorial(2 * n);
+        }
+        return result.toFixed(10);
+    }
+
+    function calculateLog(value) {
+        if (value <= 0) {
+            return 'Ошибка';
+        }
+
+        const epsilon = 1e-10;
+        let result = 0;
+        let term = (value - 1) / (value + 1);
+        let currentTerm = term;
+        let n = 1;
+
+        while (Math.abs(currentTerm) > epsilon) {
+            result += currentTerm;
+            currentTerm = (currentTerm * term * term * (2 * n - 1)) / (2 * n + 1);
+            n++;
+        }
+
+        return (2 * result).toString();
+    }
+
+    function calculateExp(value) {
+        const iterations = 20;
+        let result = 1;
+        for (let n = 1; n <= iterations; n++) {
+            result += Math.pow(value, n) / factorial(n);
+        }
+        return result;
+    }
+
+    function calculatePower(base, exponent) {
+        let result = 1;
+        for (let i = 0; i < exponent; i++) {
+            result *= base;
+        }
+        return result;
+    }
+
+    function toggleSign() {
+        if (currentInput !== '0') {
+            if (currentInput[0] === '-') {
+                currentInput = currentInput.substring(1); // Удаляем минус, если уже есть
+            } else {
+                currentInput = '-' + currentInput; // Добавляем минус, если его нет
+            }
+            updateDisplay();
+        }
+    }
+    function calculateExtendedResult(op) {
+        const inputValue = parseFloat(currentInput);
+        
+        if (op === '√') {
+            currentInput = calculateSqrt(inputValue).toString();
+        } else if (op === 'sin') {
+            currentInput = calculateSin(inputValue).toString();
+        } else if (op === 'cos') {
+            currentInput = calculateCos(inputValue).toString();
+        } else if (op === 'log') {
+            currentInput = calculateLog(inputValue).toString();
+        } else if (op === 'exp') {
+            currentInput = calculateExp(inputValue).toString();
+        } else if (op === 'x^2') {
+            currentInput = (inputValue * inputValue).toString();
+        } else if (op === 'x^y') {
+            currentOperator = '^';
+            storedValue = currentInput;
+            currentInput = '0';
+        } else if (op === 'π') {
+            currentInput = (inputValue * Math.PI).toString();
+        } else if (op === 'e') {
+            currentInput = (inputValue * Math.E).toString();
+        }
+        
+        updateDisplay();
+    }
+
+
+function calculatePercent() {
+    const inputValue = parseFloat(currentInput);
+    const storedValueFloat = parseFloat(storedValue);
+
+    if (currentOperator === '+' || currentOperator === '-' || currentOperator === '*' || currentOperator === '/') {
+        const percentage = storedValueFloat * (inputValue / 100);
+
+        if (currentOperator === '+') {
+            currentInput = (storedValueFloat + percentage).toString();
+        } else if (currentOperator === '-') {
+            currentInput = (storedValueFloat - percentage).toString();
+        } else if (currentOperator === '*') {
+            currentInput = (percentage).toString();
+        } else if (currentOperator === '/') {
+            if (inputValue === 0) {
+                currentInput = 'ERROR';
+            } else {
+                currentInput = (storedValueFloat / (inputValue / 100)).toString();
+            }
+        }
+
+        currentOperator = '';
+        storedValue = '';
+        updateDisplay();
+    } else {
+        currentInput = (inputValue / 100).toString();
+        updateDisplay();
+    }
+}
+
+    function eraseDigit() {
+    if (currentInput !== 'ERROR') {
+            currentInput = currentInput.slice(0, -1);
+            if (currentInput === '') {
+                currentInput = '0';
+            }
+            updateDisplay();
+        }
+    }
+
+    function clearEntry() {
+        currentInput = '0';
+        updateDisplay();
+    }
+// Функция для переключения отображения дополнительных кнопок
+    function toggleExtended() {
+        isExtended = !isExtended;
+        const extendedButtons = document.querySelector('.calculator-buttons-extended');
+         extendedButtons.classList.toggle('extended-buttons-visible', isExtended);
+    }
+// Функция для переключения блокировки калькулятора
+    function toggleLock() {
+        isLocked = !isLocked;
+        lockButton.classList.toggle('locked', isLocked);
+    }
+
+    updateDisplay();
+</script>
+</body>
+</html>

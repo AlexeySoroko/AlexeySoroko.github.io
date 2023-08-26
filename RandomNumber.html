@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
+
+  .container {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  label {
+    margin-right: 10px;
+  }
+
+  .ball {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 50px;
+    font-size: 20px;
+    margin: 5px;
+    background-color: #3498db;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+  }
+
+  .ball.dragging {
+    position: absolute;
+    transform: none;
+  }
+
+  .ballAnimation {
+    animation: bounce 0.5s ease-in-out;
+  }
+
+  @keyframes bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-200px);
+    }
+  }
+    .arrow {
+    position: relative;
+    display: inline-block;
+    margin-left: 5px;
+  }
+
+  .arrow::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-bottom-color: red;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Генератор Шариков</h1>
+    <div class="controls">
+      <label for="ballCount">Количество шариков:</label>
+      <input type="number" id="ballCount" value="5">
+      <label for="numberRange">Диапазон чисел:</label>
+      <input type="number" id="numberRange" value="10">
+      <input type="checkbox" id="repeatColors" checked>
+      <label for="repeatColors">Повторение цветов</label>
+      <input type="checkbox" id="noRepeatNumbers">
+      <label for="noRepeatNumbers">Без повторения чисел</label>
+      <button id="generateButton">Создать шарики</button>
+    </div>
+    <div id="ballContainer"></div>
+  </div>
+
+  <script>
+            // Получаем контейнер для шариков из HTML
+      const ballContainer = document.getElementById('ballContainer');
+
+      // Функция для генерации случайного цвета
+      function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+          color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+      }
+
+      // Функция для создания шарика
+      function createBall(number, color) {
+        const ball = document.createElement('div');
+        ball.className = 'ball'; // Устанавливаем класс для стилизации
+        ball.textContent = number; // Устанавливаем текст внутри шарика
+        ball.style.backgroundColor = color; // Устанавливаем цвет фона
+        ball.setAttribute('data-number', number); // Сохраняем число как атрибут
+
+        // Обработчик события "mousedown" для перемещения шарика
+        ball.addEventListener('mousedown', function (event) {
+          // Вычисляем сдвиг по координатам мыши
+          let shiftX = event.clientX - ball.getBoundingClientRect().left;
+          let shiftY = event.clientY - ball.getBoundingClientRect().top;
+
+          // Устанавливаем стиль позиционирования и z-index для перемещения
+          ball.style.position = 'absolute';
+          ball.style.zIndex = 1000;
+
+          // Функция для обновления позиции шарика
+          function moveAt(pageX, pageY) {
+            ball.style.left = pageX - shiftX + 'px';
+            ball.style.top = pageY - shiftY + 'px';
+          }
+
+          // Обработчик движения мыши
+          function onMouseMove(event) {
+            moveAt(event.pageX, event.pageY);
+          }
+
+          // Добавляем обработчик движения мыши при зажатой кнопке
+          document.addEventListener('mousemove', onMouseMove);
+
+          // Обработчик события "mouseup" для завершения перемещения
+          ball.addEventListener('mouseup', function () {
+            // Удаляем обработчик движения мыши и сбрасываем его
+            document.removeEventListener('mousemove', onMouseMove);
+            ball.onmouseup = null;
+
+            // Проверяем, вышел ли шарик за пределы экрана
+            if (ball.getBoundingClientRect().bottom > window.innerHeight) {
+              // Добавляем анимацию ухода и удаляем шарик через некоторое время
+              ball.classList.add('ballAnimation');
+              setTimeout(() => {
+                ball.style.display = 'none';
+                ball.classList.remove('ballAnimation');
+                ballContainer.removeChild(ball);
+              }, 1000);
+            }
+          });
+        });
+
+        // Запрещаем перетаскивание картинки при перемещении
+        ball.ondragstart = function () {
+          return false;
+        };
+
+        // Добавляем шарик в контейнер и возвращаем его
+        ballContainer.appendChild(ball);
+        return ball;
+      }
+
+      // Функция для генерации шариков
+      function generateBalls() {
+        ballContainer.innerHTML = ''; // Очищаем контейнер
+
+        // Получаем значения параметров из HTML
+        const ballCount = parseInt(document.getElementById('ballCount').value, 10);
+        const numberRange = parseInt(document.getElementById('numberRange').value, 10);
+        const repeatColors = document.getElementById('repeatColors').checked;
+        const noRepeatNumbers = document.getElementById('noRepeatNumbers').checked;
+
+        // Множества для отслеживания использованных цветов и чисел
+        const usedColors = new Set();
+        const usedNumbers = new Set();
+
+        // Карта для отслеживания повторяющихся чисел
+        const numbersMap = new Map();
+
+        // Генерируем шарики в цикле
+        for (let i = 0; i < ballCount; i++) {
+          // Генерируем случайное число и цвет
+          const number = noRepeatNumbers ? generateUniqueNumber(usedNumbers, numberRange) : generateRandomNumber(numberRange);
+          const color = repeatColors ? generateRandomColor(usedColors) : getRandomColor();
+
+          // Создаем шарик и получаем его
+          createBall(number, color);
+
+          // Добавляем число в карту повторяющихся чисел
+          if (!numbersMap.has(number)) {
+            numbersMap.set(number, []);
+          }
+          numbersMap.get(number).push(i);
+        }
+
+        // Добавляем стрелки к шарикам с одинаковыми числами
+        numbersMap.forEach(indices => {
+          if (indices.length > 1) {
+            indices.forEach(index => {
+              const ball = document.querySelectorAll('.ball')[index];
+              const arrowElement = document.createElement('div');
+              arrowElement.className = 'arrow';
+              ball.appendChild(arrowElement);
+            });
+          }
+        });
+      }
+
+      // Функция для генерации случайного числа
+      function generateRandomNumber(range) {
+        return Math.floor(Math.random() * range) + 1;
+      }
+
+      // Функция для генерации уникального числа
+      function generateUniqueNumber(usedNumbers, range) {
+        let number;
+        do {
+          number = generateRandomNumber(range);
+        } while (usedNumbers.has(number));
+        usedNumbers.add(number);
+        return number;
+      }
+
+      // Функция для генерации случайного цвета, избегая повторений
+      function generateRandomColor(usedColors) {
+        let color;
+        do {
+          color = getRandomColor();
+        } while (usedColors.has(color));
+        usedColors.add(color);
+        return color;
+      }
+
+      // Получаем кнопку для генерации и добавляем обработчик события "click"
+      const generateButton = document.getElementById('generateButton');
+      generateButton.addEventListener('click', generateBalls);
+
+      // Генерируем шарики при загрузке страницы
+      generateBalls();
+
+
+
+  </script>
+</body>
+</html>

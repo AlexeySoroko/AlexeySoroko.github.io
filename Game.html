@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: #2ecc71;
+            display: block;
+            margin: auto;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="menu" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+        <h1>Football Game</h1>
+        <button onclick="startGameWithFriend()">Play with a Friend</button><br>
+        <button onclick="startGameWithBot()">Play against the Bot</button>
+    </div>
+    <script>
+        let canvas, context;
+        let ball, player1, player2;
+        let scorePlayer1 = 0, scorePlayer2 = 0;
+        let gameInterval;
+
+        class Ball {
+            constructor(x, y, radius) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.dx = 5;
+                this.dy = 5;
+            }
+
+            move() {
+                this.x += this.dx;
+                this.y += this.dy;
+
+                if (this.y - this.radius < 0 || this.y + this.radius > canvas.height) {
+                    this.dy = -this.dy;
+                }
+
+                if (this.x - this.radius < 0) {
+                    resetBall();
+                    scorePlayer2++;
+                }
+
+                if (this.x + this.radius > canvas.width) {
+                    resetBall();
+                    scorePlayer1++;
+                }
+
+                if (this.x - this.radius < player1.x + player1.width && this.y > player1.y && this.y < player1.y + player1.height) {
+                    this.dx = -this.dx;
+                }
+
+                if (this.x + this.radius > player2.x && this.y > player2.y && this.y < player2.y + player2.height) {
+                    this.dx = -this.dx;
+                }
+            }
+
+            draw() {
+                context.beginPath();
+                context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                context.fillStyle = "white";
+                context.fill();
+                context.closePath();
+            }
+        }
+
+        class Player {
+            constructor(x, y, width, height, moveUpKey, moveDownKey) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.moveUpKey = moveUpKey;
+                this.moveDownKey = moveDownKey;
+                this.dy = 0;
+                this.speed = 5;
+            }
+
+            move = (event) => {
+                if (event.key === this.moveUpKey) {
+                    this.dy = -this.speed;
+                } else if (event.key === this.moveDownKey) {
+                    this.dy = this.speed;
+                }
+            }
+
+            stop = (event) => {
+                if (event.key === this.moveUpKey || event.key === this.moveDownKey) {
+                    this.dy = 0;
+                }
+            }
+
+            draw() {
+                this.y += this.dy;
+
+                if (this.y < 0) this.y = 0;
+                if (this.y + this.height > canvas.height) this.y = canvas.height - this.height;
+
+                context.fillStyle = "white";
+                context.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        class Bot {
+            constructor(player) {
+                this.player = player;
+            }
+
+            moveBall(ball) {
+                if (ball.dy > 0) {
+                    if (this.player.y + this.player.height / 2 < ball.y) {
+                        this.player.move({ key: "ArrowDown" });
+                    } else {
+                        this.player.move({ key: "ArrowUp" });
+                    }
+                }
+            }
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.dx = Math.random() > 0.5 ? 5 : -5;
+            ball.dy = Math.random() > 0.5 ? 5 : -5;
+        }
+
+        function startGame() {
+            canvas = document.getElementById("gameCanvas");
+            context = canvas.getContext("2d");
+            canvas.width = 800;
+            canvas.height = 600;
+
+            ball = new Ball(canvas.width / 2, canvas.height / 2, 10);
+            player1 = new Player(50, canvas.height / 2 - 30, 15, 100, "w", "s");
+            player2 = new Player(canvas.width - 65, canvas.height / 2 - 30, 15, 100, "ArrowUp", "ArrowDown");
+
+            gameInterval = setInterval(updateGameArea, 20);
+
+            document.getElementById("menu").style.display = "none";
+        }
+
+        function startGameWithFriend() {
+            startGame();
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "w" || event.key === "s") {
+                    player1.move(event);
+                }
+                if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                    player2.move(event);
+                }
+            });
+            document.addEventListener("keyup", (event) => {
+                if (event.key === "w" || event.key === "s") {
+                    player1.stop(event);
+                }
+                if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                    player2.stop(event);
+                }
+            });
+        }
+
+        function startGameWithBot() {
+            startGame();
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "w" || event.key === "s") {
+                    player1.move(event);
+                }
+            });
+            document.addEventListener("keyup", (event) => {
+                if (event.key === "w" || event.key === "s") {
+                    player1.stop(event);
+                }
+            });
+
+            const bot = new Bot(player2);
+
+            gameInterval = setInterval(() => {
+                updateGameArea();
+                bot.moveBall(ball);
+            }, 20);
+        }
+
+        function updateGameArea() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            ball.move();
+
+            if (ball.x - ball.radius < 0) ball.x = ball.radius;
+            if (ball.x + ball.radius > canvas.width) ball.x = canvas.width - ball.radius;
+            if (ball.y - ball.radius < 0) ball.y = ball.radius;
+            if (ball.y + ball.radius > canvas.height) ball.y = canvas.height - ball.radius;
+
+            ball.draw();
+            player1.draw();
+            player2.draw();
+
+            context.fillStyle = "white";
+            context.font = "20px Arial";
+            context.fillText("Player 1: " + scorePlayer1, 20, 30);
+            context.fillText("Player 2: " + scorePlayer2, canvas.width - 120, 30);
+        }
+    </script>
+</body>
+</html>
